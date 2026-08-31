@@ -1,28 +1,30 @@
 # PathwayQuant
 
-Directional quantification of pathway activity and discovery of robust,
-direction-resolved gene signatures from multi-cohort expression data.
+A unified, direction-resolved framework for pathway activity quantification and
+de novo gene-signature discovery from multi-cohort expression data.
 
 ## Highlights
 
-- **Direction-aware scoring.** Pathway activation and inhibition are modeled
-  separately and combined into a signed activity score, preserving the
-  biological direction of pathway regulation.
-- **Single-sample enrichment.** `GetScores` supports GSVA, ssGSEA, z-score, and
-  PLAGE for cohort-agnostic, sample-level pathway activity estimation.
-- **Multi-cohort de novo discovery.** `PathwayQuant` integrates one-sided
-  differential analysis across datasets with thirteen cross-dataset p-value
-  combination strategies, including robust rank aggregation and the Cauchy
-  combination test.
+- **Direction-aware pathway quantification.** Pathway activation and inhibition
+  are modeled separately and fused into a single signed activity score,
+  preserving the regulatory direction that undirected enrichment methods
+  discard.
+- **Cohort-agnostic single-sample scoring.** `GetScores` supports GSVA, ssGSEA,
+  z-score, and PLAGE for sample-level, batch-robust pathway activity
+  estimation.
+- **Multi-cohort de novo discovery.** `PathwayQuant` couples one-sided
+  differential analysis with thirteen cross-dataset p-value integration
+  strategies—including robust rank aggregation and the Cauchy combination
+  test—to synthesize evidence across heterogeneous cohorts.
 - **Knowledge-guided refinement.** Prior gene sets are fused with de novo
-  signatures through pairwise concordance filtering, linking data-driven and
-  hypothesis-driven analyses.
-- **Redundancy-aware consolidation.** Jaccard / Sørensen-Dice / hub-based
+  signatures through pairwise concordance filtering, bridging data-driven and
+  hypothesis-driven discovery.
+- **Redundancy-aware consolidation.** Jaccard, Sørensen-Dice, and hub-based
   similarity, combined with graph-component detection or hierarchical
-  clustering, removes biologically redundant gene sets.
-- **Translational potential.** The resulting `PAGS` (activation) and `PIGS`
-  (inhibition) panels are compact, interpretable, and ready for downstream
-  scoring, validation, and biomarker translation.
+  clustering, resolve biologically redundant gene sets.
+- **Translation-ready signatures.** The resulting `PAGS` (activation) and
+  `PIGS` (inhibition) panels are compact, interpretable, and directly usable
+  for downstream scoring, validation, and biomarker translation.
 
 ## Installation
 
@@ -171,7 +173,7 @@ inhibition genes (`GENE11`-`GENE20`).
 
 ### `GetScores()`
 
-Computes directional pathway activity scores from an expression matrix.
+Sample-level directional pathway activity scoring via single-sample enrichment.
 
 ```r
 GetScores(
@@ -201,7 +203,8 @@ Returns `list(final_activity_score, single_score_matrix)`.
 
 ### `PathwayQuant()`
 
-Discovers and refines directional pathway gene signatures across datasets.
+Multi-cohort de novo gene-signature discovery with knowledge-guided refinement
+and redundancy resolution.
 
 ```r
 PathwayQuant(
