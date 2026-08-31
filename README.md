@@ -33,30 +33,10 @@ flowchart TB
 
     %% ================= INPUT =================
     subgraph IN["Input"]
-        IN_EXP["Expression matrices<br/>(genes x samples)"]
+        IN_TRAIN["Training expression matrices<br/>(genes x samples)"]
         IN_GROUP["Group files<br/>(Tag, group: H / L)"]
-        IN_POS["Activation gene sets<br/>(positive direction)"]
-        IN_NEG["Inhibition gene sets<br/>(negative direction)"]
         IN_PRIOR["Prior knowledge gene sets"]
-    end
-
-    %% ================= GetScores =================
-    subgraph GS["GetScores: directional activity scoring"]
-        direction TB
-        GS_METHOD["Single-sample enrichment"]
-        GS_gsva["gsva"]
-        GS_ssgsea["ssgsea"]
-        GS_zscore["zscore"]
-        GS_plage["plage"]
-        GS_SCORES["Gene-set enrichment scores"]
-        GS_NAN["Drop all-NaN columns"]
-        GS_SCALE["Standardize (scale)"]
-        GS_WT{"weights?"}
-        GS_WT_YES["Apply gene-set weights"]
-        GS_ACT["activation_score<br/>(positive gene sets)"]
-        GS_INH["inhibition_score<br/>(negative gene sets)"]
-        GS_AGG["positive / negative<br/>aggregation scores"]
-        GS_OUT["final_activity_score +<br/>single_score_matrix"]
+        IN_NEW["Arbitrary expression profile<br/>(genes x samples)"]
     end
 
     %% ================= PathwayQuant =================
@@ -109,15 +89,33 @@ flowchart TB
         PQ_OUT["genesets (PAGS / PIGS)<br/>pmatrix + critical_score"]
     end
 
+    %% ================= GetScores =================
+    subgraph GS["GetScores: directional activity scoring"]
+        direction TB
+        GS_METHOD["Single-sample enrichment"]
+        GS_gsva["gsva"]
+        GS_ssgsea["ssgsea"]
+        GS_zscore["zscore"]
+        GS_plage["plage"]
+        GS_SCORES["Gene-set enrichment scores"]
+        GS_NAN["Drop all-NaN columns"]
+        GS_SCALE["Standardize (scale)"]
+        GS_WT{"weights?"}
+        GS_WT_YES["Apply gene-set weights"]
+        GS_ACT["activation_score<br/>(positive gene sets)"]
+        GS_INH["inhibition_score<br/>(negative gene sets)"]
+        GS_AGG["positive / negative<br/>aggregation scores"]
+        GS_OUT["final_activity_score +<br/>single_score_matrix"]
+    end
+
     %% ================= OUTPUT =================
     subgraph OUT["Output"]
         OUT_FINAL["Directional gene signatures"]
     end
 
     %% ================= EDGES: GetScores =================
-    IN_EXP --> GS_METHOD
-    IN_POS --> GS_METHOD
-    IN_NEG --> GS_METHOD
+    IN_NEW --> GS_METHOD
+    PQ_OUT -->|PAGS / PIGS| GS_METHOD
     GS_METHOD --> GS_gsva
     GS_METHOD --> GS_ssgsea
     GS_METHOD --> GS_zscore
@@ -136,7 +134,7 @@ flowchart TB
     GS_OUT --> OUT_FINAL
 
     %% ================= EDGES: PathwayQuant =================
-    IN_EXP --> PQ_LOAD
+    IN_TRAIN --> PQ_LOAD
     IN_GROUP --> PQ_LOAD
     PQ_LOAD --> PQ_GROUP --> PQ_LIMMA --> PQ_FC --> PQ_META
     PQ_META -->|yes| PQ_COMB
@@ -231,9 +229,10 @@ library(PathwayQuant)
 
 The example below simulates ten expression datasets grouped into five studies
 (`SimDataA`, `SimDataB`, `SimDataC`, `SimDataD`, `SimDataE`), where A, C, and D
-each comprise several sub-datasets. `GetScores` computes sample-level
-directional activity scores, and `PathwayQuant` discovers activation and
-inhibition gene signatures.
+each comprise several sub-datasets. `PathwayQuant` is run first to discover
+activation (`PAGS`) and inhibition (`PIGS`) gene signatures. Those signatures
+are then passed to `GetScores`, which scores an arbitrary expression profile
+generated independently from the training data.
 
 ```r
 library(PathwayQuant)
@@ -285,22 +284,7 @@ knowledge_genesets <- setNames(
   paste0("pathway_", sprintf("%02d", 1:20))
 )
 
-# 1. Sample-level directional pathway activity scores.
-scores <- GetScores(
-  expression_profile = SimDataA_a,
-  activation_geneset = list(
-    pos_activation_A = paste0("GENE", 1:5),
-    pos_activation_B = paste0("GENE", 6:10)
-  ),
-  inhibition_geneset = list(
-    neg_inhibition_A = paste0("GENE", 11:15),
-    neg_inhibition_B = paste0("GENE", 16:20)
-  ),
-  method = "ssgsea"
-)
-head(scores$final_activity_score)
-
-# 2. Discover activation signatures (up-regulated genes).
+# 1. Discover activation signatures (up-regulated genes).
 activation <- PathwayQuant(
   expression_accession_vector = datasets,
   alternative = "greater",
@@ -319,7 +303,7 @@ activation <- PathwayQuant(
 )
 str(activation$genesets)
 
-# 3. Discover inhibition signatures (down-regulated genes).
+# 2. Discover inhibition signatures (down-regulated genes).
 inhibition <- PathwayQuant(
   expression_accession_vector = datasets,
   alternative = "less",
@@ -337,6 +321,19 @@ inhibition <- PathwayQuant(
   min_genes = 5
 )
 str(inhibition$genesets)
+
+# 3. Build an arbitrary expression profile. It does not have to be one of the
+#    training matrices used above.
+arbitrary_expression <- make_dataset(seed = 999)$expr
+
+# 4. Score the arbitrary profile against the discovered PAGS and PIGS panels.
+scores <- GetScores(
+  expression_profile = arbitrary_expression,
+  activation_geneset = activation$genesets,
+  inhibition_geneset = inhibition$genesets,
+  method = "ssgsea"
+)
+head(scores$final_activity_score)
 ```
 
 If the demo works, the activation signatures contain the planted activation
