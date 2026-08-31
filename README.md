@@ -53,9 +53,11 @@ library(PathwayQuant)
 
 ## Quick start
 
-The example below simulates two expression datasets and runs the full
-workflow. `GetScores` computes sample-level directional activity scores, and
-`PathwayQuant` discovers activation and inhibition gene signatures.
+The example below simulates ten expression datasets grouped into five studies
+(`SimDataA`, `SimDataB`, `SimDataC`, `SimDataD`, `SimDataE`), where A, C, and D
+each comprise several sub-datasets. `GetScores` computes sample-level
+directional activity scores, and `PathwayQuant` discovers activation and
+inhibition gene signatures.
 
 ```r
 library(PathwayQuant)
@@ -84,18 +86,32 @@ make_dataset <- function(n_genes = 100, n_h = 30, n_l = 30, seed = 1) {
   list(expr = expr, group = group)
 }
 
-dA <- make_dataset(seed = 11)
-dB <- make_dataset(seed = 22)
+# Ten datasets across five studies. A, C, and D are split into sub-datasets.
+dataset_seed <- c(
+  SimDataA_a = 101, SimDataA_b = 102, SimDataA_c = 103,
+  SimDataB   = 104,
+  SimDataC_a = 105, SimDataC_b = 106, SimDataC_c = 107,
+  SimDataD_a = 108, SimDataD_b = 109,
+  SimDataE   = 110
+)
 
-# PathwayQuant reads data from the calling environment via get().
-SimDataA <- dA$expr
-SimDataA_G <- dA$group
-SimDataB <- dB$expr
-SimDataB_G <- dB$group
+for (nm in names(dataset_seed)) {
+  d <- make_dataset(seed = dataset_seed[[nm]])
+  assign(nm, d$expr)
+  assign(paste0(nm, "_G"), d$group)
+}
+
+datasets <- names(dataset_seed)
+
+# Twenty knowledge gene sets, each containing ten genes (drawn from GENE1-GENE100).
+knowledge_genesets <- setNames(
+  lapply(1:20, function(i) paste0("GENE", ((0:9) + (i - 1) * 5) %% 100 + 1)),
+  paste0("pathway_", sprintf("%02d", 1:20))
+)
 
 # 1. Sample-level directional pathway activity scores.
 scores <- GetScores(
-  expression_profile = SimDataA,
+  expression_profile = SimDataA_a,
   activation_geneset = list(
     pos_activation_A = paste0("GENE", 1:5),
     pos_activation_B = paste0("GENE", 6:10)
@@ -110,14 +126,11 @@ head(scores$final_activity_score)
 
 # 2. Discover activation signatures (up-regulated genes).
 activation <- PathwayQuant(
-  expression_accession_vector = c("SimDataA", "SimDataB"),
+  expression_accession_vector = datasets,
   alternative = "greater",
   denovo_genes = 50,
-  top_genes = 15,
-  knowledge_genesets = list(
-    immune = c("GENE1", "GENE2", "GENE3"),
-    signaling = c("GENE4", "GENE5", "GENE6")
-  ),
+  top_genes = 20,
+  knowledge_genesets = knowledge_genesets,
   concordance = TRUE,
   knn = FALSE,
   p_combine_method = "geometric_mean",
@@ -126,17 +139,17 @@ activation <- PathwayQuant(
   deduplication = "network",
   linkage = "ward.D",
   similarity_threshold = 0.5,
-  min_genes = 3
+  min_genes = 5
 )
 str(activation$genesets)
 
 # 3. Discover inhibition signatures (down-regulated genes).
 inhibition <- PathwayQuant(
-  expression_accession_vector = c("SimDataA", "SimDataB"),
+  expression_accession_vector = datasets,
   alternative = "less",
   denovo_genes = 50,
-  top_genes = 15,
-  knowledge_genesets = list(immune = c("GENE11", "GENE12", "GENE13")),
+  top_genes = 20,
+  knowledge_genesets = knowledge_genesets,
   concordance = TRUE,
   knn = FALSE,
   p_combine_method = "geometric_mean",
@@ -145,7 +158,7 @@ inhibition <- PathwayQuant(
   deduplication = "network",
   linkage = "ward.D",
   similarity_threshold = 0.5,
-  min_genes = 3
+  min_genes = 5
 )
 str(inhibition$genesets)
 ```
