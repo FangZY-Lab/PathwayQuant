@@ -1,2 +1,11 @@
 export(GetScores)
 export(PathwayQuant)
+
+importFrom(GSVA, gsva, gsvaParam, plageParam, ssgseaParam, zscoreParam)
+importFrom(igraph, components, graph_from_data_frame)
+importFrom(impute, impute.knn)
+importFrom(limma, contrasts.fit, eBayes, lmFit, makeContrasts, topTable)
+importFrom(metap, invchisq, logitp, meanp, meanz, sumlog, sump, sumz, votep, wilkinsonp)
+importFrom(RankProd, RP)
+importFrom(RobustRankAggreg, aggregateRanks)
+importFrom(stats, as.dist, cutree, hclust, model.matrix, na.omit, pcauchy, pt)
