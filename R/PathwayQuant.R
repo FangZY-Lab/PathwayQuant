@@ -46,6 +46,13 @@
 #' @return A list with `genesets` (final directional gene sets named `PAGS_*` or
 #'   `PIGS_*`), `pmatrix`, `critical_score`, and, when `magnitude = TRUE`,
 #'   `fcmatrix`.
+#' @importFrom igraph components graph_from_data_frame
+#' @importFrom impute impute.knn
+#' @importFrom limma contrasts.fit eBayes lmFit makeContrasts topTable
+#' @importFrom metap invchisq logitp meanp meanz sumlog sump sumz votep wilkinsonp
+#' @importFrom RankProd RP
+#' @importFrom RobustRankAggreg aggregateRanks
+#' @importFrom stats as.dist cutree hclust model.matrix na.omit pcauchy pt
 #' @export
 
 
@@ -72,14 +79,6 @@ PathwayQuant=function(expression_accession_vector,
                       similarity_threshold=0.5,
                       min_genes=5
 ){
-  library(limma)
-  library(metap)
-  library(reshape2)
-  library(igraph)
-  library(tidyverse)
-  library(RobustRankAggreg)
-  library(RankProd)
-  library(impute)
   ##########################################CTT: a p-value integration method
   #Liu Y, Xie J. Cauchy combination test: a powerful test with analytic p-value calculation under arbitrary dependency structures. J Am Stat Assoc. 2020;115(529):393-402. doi: 10.1080/01621459.2018.1554485. Epub 2019 Apr 25. PMID: 33012899; PMCID: PMC7531765.
   #Liu Y, Chen S, Li Z, Morrison AC, Boerwinkle E, Lin X. ACAT: A Fast and Powerful p Value Combination Method for Rare-Variant Analysis in Sequencing Studies. Am J Hum Genet. 2019 Mar 7;104(3):410-421. doi: 10.1016/j.ajhg.2019.01.002. PMID: 30849328; PMCID: PMC6407498.
