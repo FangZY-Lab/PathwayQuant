@@ -1,0 +1,27 @@
+Package: PathwayQuant
+Type: Package
+Title: Directional Pathway Activity Quantification and Gene Signature Discovery
+Version: 0.1.0
+Authors@R: 
+    person("Dingkang", "Zhao", email = "dingkang.25@intl.zju.edu.cn",
+           role = c("aut", "cre"))
+Description: An integrated framework for quantifying pathway activity and
+    discovering directionally resolved gene signatures. It provides
+    single-sample enrichment-based activity scoring (GSVA, ssGSEA, z-score,
+    and PLAGE) and a multi-cohort de novo signature discovery pipeline with
+    cross-dataset p-value integration, knowledge-guided refinement, and
+    redundancy removal.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Depends: 
+    R (>= 4.0.0)
+Imports: 
+    GSVA,
+    igraph,
+    impute,
+    limma,
+    metap,
+    RankProd,
+    reshape2,
+    RobustRankAggreg,
+    tidyverse
