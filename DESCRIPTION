@@ -23,5 +23,4 @@ Imports:
     metap,
     RankProd,
     reshape2,
-    RobustRankAggreg,
-    tidyverse
+    RobustRankAggreg
