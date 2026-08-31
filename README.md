@@ -26,6 +26,180 @@ de novo gene-signature discovery from multi-cohort expression data.
   `PIGS` (inhibition) panels are compact, interpretable, and directly usable
   for downstream scoring, validation, and biomarker translation.
 
+## Pipeline overview
+
+```mermaid
+flowchart TB
+
+    %% ================= INPUT =================
+    subgraph IN["Input"]
+        IN_EXP["Expression matrices<br/>(genes x samples)"]
+        IN_GROUP["Group files<br/>(Tag, group: H / L)"]
+        IN_POS["Activation gene sets<br/>(positive direction)"]
+        IN_NEG["Inhibition gene sets<br/>(negative direction)"]
+        IN_PRIOR["Prior knowledge gene sets"]
+    end
+
+    %% ================= GetScores =================
+    subgraph GS["GetScores: directional activity scoring"]
+        direction TB
+        GS_METHOD["Single-sample enrichment"]
+        GS_gsva["gsva"]
+        GS_ssgsea["ssgsea"]
+        GS_zscore["zscore"]
+        GS_plage["plage"]
+        GS_SCORES["Gene-set enrichment scores"]
+        GS_NAN["Drop all-NaN columns"]
+        GS_SCALE["Standardize (scale)"]
+        GS_WT{"weights?"}
+        GS_WT_YES["Apply gene-set weights"]
+        GS_ACT["activation_score<br/>(positive gene sets)"]
+        GS_INH["inhibition_score<br/>(negative gene sets)"]
+        GS_AGG["positive / negative<br/>aggregation scores"]
+        GS_OUT["final_activity_score +<br/>single_score_matrix"]
+    end
+
+    %% ================= PathwayQuant =================
+    subgraph PQ["PathwayQuant: de novo signature discovery"]
+        direction TB
+        PQ_LOAD["Load data via get()"]
+        PQ_GROUP["Group datasets by prefix (_)"]
+        PQ_LIMMA["One-sided limma test<br/>(H vs L)"]
+        PQ_FC["Per-gene logFC + P-value"]
+        PQ_META{"Multiple<br/>sub-datasets?"}
+        PQ_COMB["Cross-dataset<br/>p-value integration"]
+        PQ_c1["geometric_mean"]
+        PQ_c2["rra"]
+        PQ_c3["invchisq"]
+        PQ_c4["logitp"]
+        PQ_c5["cct"]
+        PQ_c6["meanp / meanz"]
+        PQ_c7["sumlog / sumz"]
+        PQ_c8["sump / votep"]
+        PQ_c9["wilkinsonp"]
+        PQ_c10["rankproduct"]
+        PQ_SCREEN["Screen genes<br/>(denovo_genes)"]
+        PQ_DIR{"alternative?"}
+        PQ_UP["Activation<br/>(logFC > 0)"]
+        PQ_DN["Inhibition<br/>(logFC < 0)"]
+        PQ_KNOW["Knowledge integration"]
+        PQ_CONC{"concordance?"}
+        PQ_CONC_YES["Pairwise intersection"]
+        PQ_CONC_NO["Concatenation"]
+        PQ_PMAT["P-value matrix"]
+        PQ_FCMAT["logFC matrix"]
+        PQ_NAF["NA filter (na_ratio)"]
+        PQ_KNN{"knn?"}
+        PQ_KNN_YES["KNN imputation"]
+        PQ_PSCORE["p_score = -log10(P)"]
+        PQ_MAG{"magnitude?"}
+        PQ_MAG_YES["critical_score =<br/>logFC x p_score"]
+        PQ_MAG_NO["critical_score = p_score"]
+        PQ_TOP["top_genes / top_threshold"]
+        PQ_PURIFY["Purification (intersection)"]
+        PQ_DEDUP{"deduplication?"}
+        PQ_NET["network<br/>(graph components)"]
+        PQ_CLUST["clustering<br/>(hclust + cutree)"]
+        PQ_SIM["Similarity metric"]
+        PQ_s1["Jaccard"]
+        PQ_s2["Sorensen-Dice"]
+        PQ_s3["Hub-Promoted"]
+        PQ_s4["Hub-Depressed"]
+        PQ_MIN["min_genes filter"]
+        PQ_OUT["genesets (PAGS / PIGS)<br/>pmatrix + critical_score"]
+    end
+
+    %% ================= OUTPUT =================
+    subgraph OUT["Output"]
+        OUT_FINAL["Directional gene signatures"]
+    end
+
+    %% ================= EDGES: GetScores =================
+    IN_EXP --> GS_METHOD
+    IN_POS --> GS_METHOD
+    IN_NEG --> GS_METHOD
+    GS_METHOD --> GS_gsva
+    GS_METHOD --> GS_ssgsea
+    GS_METHOD --> GS_zscore
+    GS_METHOD --> GS_plage
+    GS_gsva --> GS_SCORES
+    GS_ssgsea --> GS_SCORES
+    GS_zscore --> GS_SCORES
+    GS_plage --> GS_SCORES
+    GS_SCORES --> GS_NAN --> GS_SCALE --> GS_WT
+    GS_WT -->|yes| GS_WT_YES
+    GS_WT -->|no| GS_ACT
+    GS_WT_YES --> GS_ACT
+    GS_ACT --> GS_AGG
+    GS_INH --> GS_AGG
+    GS_AGG --> GS_OUT
+    GS_OUT --> OUT_FINAL
+
+    %% ================= EDGES: PathwayQuant =================
+    IN_EXP --> PQ_LOAD
+    IN_GROUP --> PQ_LOAD
+    PQ_LOAD --> PQ_GROUP --> PQ_LIMMA --> PQ_FC --> PQ_META
+    PQ_META -->|yes| PQ_COMB
+    PQ_META -->|no| PQ_SCREEN
+    PQ_COMB --> PQ_c1
+    PQ_COMB --> PQ_c2
+    PQ_COMB --> PQ_c3
+    PQ_COMB --> PQ_c4
+    PQ_COMB --> PQ_c5
+    PQ_COMB --> PQ_c6
+    PQ_COMB --> PQ_c7
+    PQ_COMB --> PQ_c8
+    PQ_COMB --> PQ_c9
+    PQ_COMB --> PQ_c10
+    PQ_c1 --> PQ_SCREEN
+    PQ_c2 --> PQ_SCREEN
+    PQ_c3 --> PQ_SCREEN
+    PQ_c4 --> PQ_SCREEN
+    PQ_c5 --> PQ_SCREEN
+    PQ_c6 --> PQ_SCREEN
+    PQ_c7 --> PQ_SCREEN
+    PQ_c8 --> PQ_SCREEN
+    PQ_c9 --> PQ_SCREEN
+    PQ_c10 --> PQ_SCREEN
+    PQ_SCREEN --> PQ_DIR
+    PQ_DIR -->|greater| PQ_UP
+    PQ_DIR -->|less| PQ_DN
+    PQ_UP --> PQ_KNOW
+    PQ_DN --> PQ_KNOW
+    IN_PRIOR --> PQ_KNOW
+    PQ_KNOW --> PQ_CONC
+    PQ_CONC -->|TRUE| PQ_CONC_YES
+    PQ_CONC -->|FALSE| PQ_CONC_NO
+    PQ_CONC_YES --> PQ_PMAT
+    PQ_CONC_NO --> PQ_PMAT
+    PQ_PMAT --> PQ_NAF
+    PQ_FCMAT --> PQ_NAF
+    PQ_NAF --> PQ_KNN
+    PQ_KNN -->|TRUE| PQ_KNN_YES
+    PQ_KNN -->|FALSE| PQ_PSCORE
+    PQ_KNN_YES --> PQ_PSCORE
+    PQ_PSCORE --> PQ_MAG
+    PQ_MAG -->|TRUE| PQ_MAG_YES
+    PQ_MAG -->|FALSE| PQ_MAG_NO
+    PQ_MAG_YES --> PQ_TOP
+    PQ_MAG_NO --> PQ_TOP
+    PQ_TOP --> PQ_PURIFY --> PQ_DEDUP
+    PQ_DEDUP -->|network| PQ_NET
+    PQ_DEDUP -->|clustering| PQ_CLUST
+    PQ_NET --> PQ_SIM
+    PQ_CLUST --> PQ_SIM
+    PQ_SIM --> PQ_s1
+    PQ_SIM --> PQ_s2
+    PQ_SIM --> PQ_s3
+    PQ_SIM --> PQ_s4
+    PQ_s1 --> PQ_MIN
+    PQ_s2 --> PQ_MIN
+    PQ_s3 --> PQ_MIN
+    PQ_s4 --> PQ_MIN
+    PQ_MIN --> PQ_OUT
+    PQ_OUT --> OUT_FINAL
+```
+
 ## Installation
 
 Run the following in a fresh R session:
