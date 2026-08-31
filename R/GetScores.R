@@ -25,6 +25,7 @@
 #'   `inhibition_score`, `positive_aggregation_score`,
 #'   `negative_aggregation_score`) and `single_score_matrix` (the standardized
 #'   per-gene-set enrichment matrix).
+#' @importFrom GSVA gsva gsvaParam plageParam ssgseaParam zscoreParam
 #' @export
 
 
@@ -39,8 +40,6 @@ GetScores=function(expression_profile,
                    weights=NULL
 ){
   options(matrixStats.useNames = FALSE)
-  library(GSVA)
-  
   exp = expression_profile
   dimnames = list(rownames(exp), colnames(exp))
   exp = matrix(as.numeric(as.matrix(exp)), nrow = nrow(exp), dimnames = dimnames)
